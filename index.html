@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Generatoare Rapoarte ATM</title>
+    <!-- Tailwind CSS pentru stilizare -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Format A4 adaptat pentru meniu */
+        .a4-menu {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2.54cm; /* Margini standard de 1 inch */
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 14pt;
+            color: black;
+            border-bottom-left-radius: 0.75rem;
+            border-bottom-right-radius: 0.75rem;
+        }
+        
+        /* Stil pentru link-uri */
+        .report-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background-color: #f8fafc; /* slate-50 */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: #1e293b; /* slate-800 */
+            transition: all 0.2s;
+            font-family: sans-serif;
+        }
+        
+        .report-link:hover {
+            background-color: #f1f5f9; /* slate-100 */
+            border-color: #cbd5e1; /* slate-300 */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .report-icon {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 9999px;
+            margin-right: 1rem;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-slate-300 text-slate-800 p-4 md:p-8 font-sans">
+
+    <!-- BARA DE CONTROL (Fixată sus) -->
+    <div class="max-w-[210mm] mx-auto bg-slate-800 text-white p-6 rounded-t-xl flex flex-col md:flex-row justify-between items-center shadow-lg relative z-10">
+        <div class="text-center md:text-left">
+            <h1 class="text-2xl font-bold">Portal Generatoare Rapoarte ATM</h1>
+            <p class="text-sm text-slate-300 mt-1">Selectați tipul de raport pe care doriți să-l generați</p>
+        </div>
+    </div>
+
+    <!-- MENIU DOCUMENTE -->
+    <div class="overflow-x-auto pb-12">
+        <div class="a4-menu">
+            
+            <div class="text-center font-bold mb-8 font-sans">
+                <h2 class="text-xl border-b-2 border-slate-200 pb-2 inline-block">DOCUMENTE DISPONIBILE</h2>
+            </div>
+
+            <div class="space-y-4">
+                <a href="invoire.html" class="report-link">
+                    <div class="report-icon">Î</div>
+                    <div>
+                        <div class="font-bold text-lg">Raport Învoire</div>
+                        <div class="text-sm text-slate-500">Generator pentru raport de învoire standard</div>
+                    </div>
+                </a>
+
+                <a href="b.html" class="report-link">
+                    <div class="report-icon">P</div>
+                    <div>
+                        <div class="font-bold text-lg">Raport Permisie</div>
+                        <div class="text-sm text-slate-500">Generator pentru raport de permisie</div>
+                    </div>
+                </a>
+
+                <a href="vacanta.html" class="report-link">
+                    <div class="report-icon">V</div>
+                    <div>
+                        <div class="font-bold text-lg">Raport Vacanță (Părăsire Țară)</div>
+                        <div class="text-sm text-slate-500">Generator pentru raport de vacanță cu părăsirea țării</div>
+                    </div>
+                </a>
+
+                <a href="raport_an_univ.html" class="report-link">
+                    <div class="report-icon">A</div>
+                    <div>
+                        <div class="font-bold text-lg">Raport Părăsire Țară (An Universitar)</div>
+                        <div class="text-sm text-slate-500">Generator pentru raport de părăsire a țării în decursul anului universitar</div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="mt-12 text-center text-sm text-slate-400 font-sans border-t border-slate-100 pt-4">
+                &copy; Academia Tehnică Militară „Ferdinand I”
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

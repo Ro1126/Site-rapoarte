@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Raport Vacanță (Părăsire Țară)</title>
+    <!-- Tailwind CSS pentru stilizare -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- docx.js pentru generare Word -->
+    <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+    <style>
+        /* Stil personalizat pentru "spațiile de completat" din document */
+        .doc-input {
+            background-color: #fef9c3; /* Galben foarte deschis pt a indica zona editabilă */
+            border-bottom: 1px dashed #ca8a04;
+            outline: none;
+            font-family: 'Times New Roman', Times, serif;
+            padding: 0 4px;
+            color: #000;
+            transition: all 0.2s;
+        }
+        .doc-input:focus {
+            background-color: #fef08a;
+            border-bottom: 1px solid #a16207;
+        }
+        .doc-input::placeholder {
+            color: #9ca3af;
+            font-style: italic;
+        }
+        /* Ascunde placeholder-ul cand utilizatorul da click */
+        .doc-input:focus::placeholder {
+            color: transparent;
+        }
+        /* Format A4 pentru container */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2.54cm; /* Margini standard de 1 inch */
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            color: black;
+            line-height: 1.5;
+        }
+        
+        @media print {
+            .no-print { display: none; }
+            .a4-page { box-shadow: none; padding: 0; width: auto; height: auto;}
+            .doc-input { background: transparent; border: none; }
+        }
+    </style>
+</head>
+<body class="bg-slate-300 text-slate-800 p-4 md:p-8 font-sans">
+
+    <!-- BARA DE CONTROL (Fixată sus) -->
+    <div class="max-w-[210mm] mx-auto bg-slate-800 text-white p-4 rounded-t-xl flex flex-col md:flex-row justify-between items-center shadow-lg no-print gap-4 z-10 relative">
+        <div>
+            <h1 class="text-xl font-bold">Document Interactiv: Părăsire Țară (Vacanță)</h1>
+            <p class="text-xs text-slate-300">Bifează opțiunile și completează pe spațiile galbene</p>
+        </div>
+        <div class="flex gap-3">
+            <button type="button" onclick="fillDemoData()" class="text-sm bg-slate-600 hover:bg-slate-500 py-2 px-4 rounded transition">
+                Pre-completează Demo
+            </button>
+            <button type="button" onclick="generateDocument()" class="text-sm bg-blue-600 hover:bg-blue-500 font-bold py-2 px-4 rounded transition shadow-[0_0_15px_rgba(37,99,235,0.5)]">
+                Descarcă .docx
+            </button>
+        </div>
+    </div>
+
+    <!-- DOCUMENTUL TIP A4 -->
+    <div class="overflow-x-auto pb-12">
+        <div class="a4-page relative">
+            
+            <!-- ANTET -->
+            <div class="flex justify-between items-start text-sm md:text-base">
+                <div class="w-[65%] text-center">
+                    <p class="uppercase">ROMÂNIA</p>
+                    <p class="uppercase">Ministerul Apărării Naționale</p>
+                    <p class="uppercase">Academia Tehnică Militară „Ferdinand I”</p>
+                    <p>
+                        Batalionul <input type="text" id="batalionAntet" class="doc-input w-8 text-center" placeholder="..."> /
+                        Compania <input type="text" id="companieAntet" class="doc-input w-8 text-center" placeholder="..."> / 
+                        Plutonul <input type="text" id="pluton" class="doc-input w-8 text-center" placeholder="...">
+                    </p>
+                    <p>
+                        SD. <input type="text" id="gradNume" class="doc-input w-[85%] mt-1 text-center" placeholder="Gradul și Numele (ex: Sg. Maj. Popescu Ion)">
+                    </p>
+                    <p class="mt-1">Nr ________ din ________</p>
+                    <p>- Bucureşti -</p>
+                </div>
+                <div class="text-right font-bold w-[35%]">
+                    <p>NECLASIFICAT</p>
+                    <p>Exemplar unic</p>
+                </div>
+            </div>
+
+            <!-- TITLU -->
+            <div class="text-center font-bold mt-10 mb-6">
+                <p>LOCŢIITORULUI COMANDANTULUI ACADEMIEI TEHNICE</p>
+                <p>MILITARE „FERDINAND I”</p>
+            </div>
+
+            <!-- CORPUL TEXTULUI -->
+            <div class="text-justify space-y-2">
+                <p class="pl-[1.27cm]">Raportez:</p>
+                
+                <p class="pl-[2.54cm] leading-[2]">
+                    În perioada <input type="date" id="dataIncPlecare" class="doc-input"> ora <input type="text" id="oraIncPlecare" class="doc-input w-14 text-center" placeholder="HH:MM" maxlength="5">
+                    până la <input type="date" id="dataSfPlecare" class="doc-input"> ora <input type="text" id="oraSfPlecare" class="doc-input w-14 text-center" placeholder="HH:MM" maxlength="5">
+                    părăsesc țara şi mă deplasez la adresa:
+                </p>
+
+                <div class="pl-[2.54cm] leading-[2]">
+                    <!-- Folosim pl-6 -ml-6 pentru hanging indent in HTML -->
+                    <p class="pl-6 -ml-6">
+                        - țara: <input type="text" id="tara" class="doc-input w-48" placeholder="ex: Italia">; 
+                        localitatea: <input type="text" id="localitate" class="doc-input w-48" placeholder="ex: Roma">;
+                    </p>
+                    
+                    <p class="mt-2 pl-6 -ml-6">- scopul:</p>
+                    <div class="pl-6 flex flex-row flex-wrap items-center gap-x-6 gap-y-1">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbTuristic" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'scop')">
+                            <span class="ml-2">turistic;</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbVizita" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'scop')">
+                            <span class="ml-2">vizită (rude, prieteni, cunoştinţe);</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbAltul" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'scop'); toggleAltScop()">
+                            <span class="ml-2">altul, şi anume <input type="text" id="scopAltul" class="doc-input w-48 opacity-50 ml-1" disabled placeholder="...">;</span>
+                        </label>
+                    </div>
+
+                    <p class="mt-2 pl-6 -ml-6">- tip călătorie:</p>
+                    <div class="pl-6 flex flex-row flex-wrap items-center gap-x-6 gap-y-1">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbIndiv" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'tip')">
+                            <span class="ml-2">individual;</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbFam" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'tip')">
+                            <span class="ml-2">cu familia;</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbGrup" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'tip')">
+                            <span class="ml-2">în grup (mai multe familii);</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="cbAgentie" class="w-4 h-4 cursor-pointer accent-blue-600" onclick="onlyOne(this, 'tip'); toggleAgentie()">
+                            <span class="ml-2">în grup organizat de o agenție de turism şi anume <input type="text" id="agentie" class="doc-input w-48 opacity-50 ml-1" disabled placeholder="...">;</span>
+                        </label>
+                    </div>
+
+                    <p class="mt-2 pl-6 -ml-6">
+                        - itinerar: <input type="text" id="itinerar" class="doc-input w-[70%]" placeholder="ex: București - Roma și retur">;
+                    </p>
+                    <p class="mt-2 pl-6 -ml-6">
+                        - mijloc de deplasare: <input type="text" id="mijlocTransport" class="doc-input w-32 mx-1" placeholder="ex: avion">; 
+                    </p>
+                    <p class="mt-2 pl-6 -ml-6 flex flex-wrap items-center gap-y-1">
+                        - firma de transport: 
+                        <label class="inline-flex items-center cursor-pointer ml-2 mr-1">
+                            <input type="checkbox" id="cbFirma" class="w-4 h-4 cursor-pointer accent-blue-600" onchange="if(this.checked) { document.getElementById('nuEcazulTransport').checked = false; toggleTransport(); }">
+                        </label>
+                        <input type="text" id="firmaTransport" class="doc-input w-40 mx-1" placeholder="ex: WizzAir">
+                        <label class="inline-flex items-center cursor-pointer ml-4">
+                            <input type="checkbox" id="nuEcazulTransport" class="w-4 h-4 cursor-pointer accent-blue-600" onchange="toggleTransport()">
+                            <span class="ml-2">Nu e cazul.</span>
+                        </label>
+                    </p>
+                    <p class="mt-2 pl-6 -ml-6">
+                        - voi locui la adresa: <input type="text" id="adresaCazare" class="doc-input w-[70%]" placeholder="ex: Hotel X, Str. Y, Nr. Z">;
+                    </p>
+                    <p class="mt-2 pl-6 -ml-6">
+                        - pot fi contactat la nr. de telefon: <input type="text" id="telefon" class="doc-input w-48" placeholder="ex: +407XX XXX XXX">.
+                    </p>
+                </div>
+
+                <p class="mt-2 text-justify pl-[2.54cm] leading-[2]">
+                    Menționez că în această perioadă mă aflu în <input type="text" id="situatieCurenta" class="doc-input w-64" placeholder="ex: vacanța de vară">.
+                </p>
+
+                <p class="mt-2 text-justify pl-[2.54cm]">
+                    Am luat la cunoștință de prevederile Ordinului ministrului apărării naționale nr. MS-198/2020, privind obligațiile personalului din Ministerul Apărării Naționale care stabileşte relații cu străini în interes personal şi de faptul că am următoarele obligații:
+                </p>
+                <div class="pl-[2.54cm]">
+                    <p class="font-bold">➢ să predau:</p>
+                    <ul class="list-disc pl-8">
+                        <li class="pl-2">documentele în lucru şefului nemijlocit, spre păstrare;</li>
+                        <li class="pl-2">documentele de acces (permis, card) la structura de securitate;</li>
+                        <li class="pl-2">documentele de evidență (legitimație, carnet de serviciu) la S.M.R.U.</li>
+                    </ul>
+                    <p class="font-bold mt-2">➢ să mă prezint la structura de securitate la întoarcerea din concediu.</p>
+                </div>
+            </div>
+
+            <!-- SEMNATURA SOLICITANT -->
+            <div class="flex justify-between mt-6 mb-6 px-12">
+                <div class="text-center">
+                    <p>Data</p>
+                    <input type="date" id="dataRaport" class="doc-input mt-1">
+                </div>
+                <div class="text-center">
+                    <p>Semnătura</p>
+                    <p class="mt-1 text-slate-400">.......................</p>
+                </div>
+            </div>
+
+            <!-- AVIZE (Grid format - Varianta Vacanță doar cu 4 Avize) -->
+            <div class="grid grid-cols-2 gap-y-4 gap-x-4 mt-6 text-sm text-center font-bold">
+                <div>
+                    <p>AVIZ COMANDANT COMPANIE</p>
+                    <p class="mt-4 font-normal text-slate-400">............................................</p>
+                </div>
+                <div>
+                    <p>AVIZ STRUCTURA DE SECURITATE</p>
+                    <p class="mt-4 font-normal text-slate-400">............................................</p>
+                </div>
+                <div>
+                    <p>AVIZ OFIȚER D.C.I.S.M.</p>
+                    <p class="mt-4 font-normal text-slate-400">............................................</p>
+                </div>
+                <div>
+                    <p>AVIZ L.P.I.</p>
+                    <p class="mt-4 font-normal text-slate-400">............................................</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Utilitare pentru formatarea input-urilor
+        function formatDate(dateStr) {
+            if (!dateStr) return "___.___.___";
+            const [y, m, d] = dateStr.split('-');
+            return `${d}.${m}.${y}`;
+        }
+
+        function formatTimeInput(e) {
+            let val = e.target.value.replace(/\D/g, ''); 
+            if (val.length > 2) {
+                val = val.substring(0, 2) + ':' + val.substring(2, 4);
+            }
+            e.target.value = val;
+        }
+
+        ['oraIncPlecare', 'oraSfPlecare'].forEach(id => {
+            document.getElementById(id).addEventListener('input', formatTimeInput);
+        });
+
+        // Logica pentru casute de bifare exclusive
+        function onlyOne(checkbox, groupName) {
+            if (!checkbox.checked) return;
+            let group = [];
+            if (groupName === 'scop') group = ['cbTuristic', 'cbVizita', 'cbAltul'];
+            if (groupName === 'tip') group = ['cbIndiv', 'cbFam', 'cbGrup', 'cbAgentie'];
+
+            group.forEach(id => {
+                if (id !== checkbox.id) document.getElementById(id).checked = false;
+            });
+            
+            // Declanșare funcții secundare pentru vizibilitate input text
+            if (groupName === 'scop') toggleAltScop();
+            if (groupName === 'tip') toggleAgentie();
+        }
+
+        // Logica vizibilitate câmpuri text adiacente
+        function toggleAltScop() {
+            const cb = document.getElementById('cbAltul');
+            const input = document.getElementById('scopAltul');
+            if(cb.checked) {
+                input.disabled = false;
+                input.classList.remove('opacity-50');
+                input.focus();
+            } else {
+                input.disabled = true;
+                input.value = "";
+                input.classList.add('opacity-50');
+            }
+        }
+
+        function toggleAgentie() {
+            const cb = document.getElementById('cbAgentie');
+            const input = document.getElementById('agentie');
+            if(cb.checked) {
+                input.disabled = false;
+                input.classList.remove('opacity-50');
+                input.focus();
+            } else {
+                input.disabled = true;
+                input.value = "";
+                input.classList.add('opacity-50');
+            }
+        }
+
+        function toggleTransport() {
+            const checkbox = document.getElementById('nuEcazulTransport');
+            const cbFirma = document.getElementById('cbFirma');
+            const input = document.getElementById('firmaTransport');
+            if (checkbox.checked) {
+                input.value = "";
+                input.disabled = true;
+                input.classList.add('opacity-50');
+                if(cbFirma) cbFirma.checked = false;
+            } else {
+                input.disabled = false;
+                input.classList.remove('opacity-50');
+            }
+        }
+
+        // Pre-completare Demo
+        function fillDemoData() {
+            document.getElementById('batalionAntet').value = "1";
+            document.getElementById('companieAntet').value = "2";
+            document.getElementById('pluton').value = "3";
+            document.getElementById('gradNume').value = "Sg. Maj. Ionescu Alexandru";
+
+            document.getElementById('dataIncPlecare').value = "2025-07-15";
+            document.getElementById('oraIncPlecare').value = "08:00";
+            document.getElementById('dataSfPlecare').value = "2025-08-10";
+            document.getElementById('oraSfPlecare').value = "22:00";
+
+            document.getElementById('tara').value = "Spania";
+            document.getElementById('localitate').value = "Madrid";
+            
+            document.getElementById('cbTuristic').checked = true;
+            onlyOne(document.getElementById('cbTuristic'), 'scop');
+
+            document.getElementById('cbFam').checked = true;
+            onlyOne(document.getElementById('cbFam'), 'tip');
+
+            document.getElementById('itinerar').value = "București - Madrid și retur";
+            document.getElementById('mijlocTransport').value = "avion";
+            document.getElementById('cbFirma').checked = true;
+            document.getElementById('firmaTransport').value = "Tarom";
+            document.getElementById('nuEcazulTransport').checked = false;
+            toggleTransport();
+
+            document.getElementById('adresaCazare').value = "Hotel Central, Str. Mayor, Nr. 12";
+            document.getElementById('telefon').value = "+40 712 345 678";
+            
+            document.getElementById('situatieCurenta').value = "vacanța de vară";
+
+            document.getElementById('dataRaport').value = new Date().toISOString().split('T')[0];
+        }
+
+        // Functia de generare DOCX
+        function generateDocument() {
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, WidthType, BorderStyle } = docx;
+
+            const batalionAntet = document.getElementById('batalionAntet').value || "...";
+            const companieAntet = document.getElementById('companieAntet').value || "...";
+            const pluton = document.getElementById('pluton').value || "...";
+            const gradNume = document.getElementById('gradNume').value || "..................";
+
+            const dataIncPlecare = formatDate(document.getElementById('dataIncPlecare').value);
+            const oraIncPlecare = document.getElementById('oraIncPlecare').value || "......";
+            const dataSfPlecare = formatDate(document.getElementById('dataSfPlecare').value);
+            const oraSfPlecare = document.getElementById('oraSfPlecare').value || "......";
+
+            const tara = document.getElementById('tara').value || "..................";
+            const localitate = document.getElementById('localitate').value || "..................";
+            
+            const isTuristic = document.getElementById('cbTuristic').checked ? "☒" : "☐";
+            const isVizita = document.getElementById('cbVizita').checked ? "☒" : "☐";
+            const isAltul = document.getElementById('cbAltul').checked ? "☒" : "☐";
+            const altulText = document.getElementById('cbAltul').checked ? (document.getElementById('scopAltul').value || "..................") : "..................";
+
+            const isIndiv = document.getElementById('cbIndiv').checked ? "☒" : "☐";
+            const isFam = document.getElementById('cbFam').checked ? "☒" : "☐";
+            const isGrup = document.getElementById('cbGrup').checked ? "☒" : "☐";
+            const isAgentie = document.getElementById('cbAgentie').checked ? "☒" : "☐";
+            const agentieText = document.getElementById('cbAgentie').checked ? (document.getElementById('agentie').value || "..................") : "..................";
+
+            const itinerar = document.getElementById('itinerar').value || "....................................";
+            const mijlocTransport = document.getElementById('mijlocTransport').value || "..................";
+            
+            const isFirma = document.getElementById('cbFirma').checked ? "☒" : "☐";
+            const isNuEcazul = document.getElementById('nuEcazulTransport').checked ? "☒" : "☐";
+            let firmaTransport = document.getElementById('nuEcazulTransport').checked ? ".................." : (document.getElementById('firmaTransport').value || "..................");
+
+            const adresaCazare = document.getElementById('adresaCazare').value || "....................................";
+            const telefon = document.getElementById('telefon').value || "..................";
+            
+            const situatieCurenta = document.getElementById('situatieCurenta').value || "....................................";
+
+            const dataRaport = formatDate(document.getElementById('dataRaport').value);
+
+            const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+
+            const createAvizCell = (title) => {
+                return new TableCell({
+                    borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                    children: [
+                        new Paragraph({ text: title, alignment: AlignmentType.CENTER, bold: true, size: 20 }),
+                        new Paragraph({ text: "", spacing: { after: 100 } }),
+                        new Paragraph({ text: ".......................................", alignment: AlignmentType.CENTER, color: "999999" })
+                    ]
+                });
+            };
+
+            const doc = new Document({
+                creator: "Generator Raport ATM",
+                styles: {
+                    default: {
+                        document: { run: { font: "Times New Roman", size: 24 }, paragraph: { spacing: { line: 240 } } }
+                    }
+                },
+                sections: [{
+                    properties: { page: { margin: { top: 720, right: 1134, bottom: 720, left: 1134 } } },
+                    children: [
+                        // ANTET
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({
+                                            width: { size: 65, type: WidthType.PERCENTAGE },
+                                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                            children: [
+                                                new Paragraph({ text: "ROMÂNIA", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "MINISTERUL APĂRĂRII NAȚIONALE", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "ACADEMIA TEHNICĂ MILITARĂ „FERDINAND I”", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: `Batalionul ${batalionAntet} / Compania ${companieAntet} / Plutonul ${pluton}`, alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: `SD. ${gradNume}`, alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "Nr ________ din ________", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "- Bucureşti -", alignment: AlignmentType.CENTER }),
+                                            ]
+                                        }),
+                                        new TableCell({
+                                            width: { size: 35, type: WidthType.PERCENTAGE },
+                                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                            children: [
+                                                new Paragraph({ text: "NECLASIFICAT", alignment: AlignmentType.RIGHT, bold: true }),
+                                                new Paragraph({ text: "Exemplar unic", alignment: AlignmentType.RIGHT }),
+                                            ]
+                                        })
+                                    ]
+                                })
+                            ]
+                        }),
+
+                        new Paragraph({ text: "", spacing: { after: 100 } }),
+
+                        // TITLU
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({ text: "LOCŢIITORULUI COMANDANTULUI ACADEMIEI TEHNICE", bold: true }) ] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({ text: "MILITARE „FERDINAND I”", bold: true }) ] }),
+                        new Paragraph({ text: "", spacing: { after: 100 } }),
+
+                        // CORP
+                        new Paragraph({ text: "Raportez:", indent: { left: 720 } }),
+                        new Paragraph({
+                            indent: { left: 1440 },
+                            alignment: AlignmentType.JUSTIFIED,
+                            children: [ new TextRun(`În perioada ${dataIncPlecare} ora ${oraIncPlecare} - ${dataSfPlecare} ora ${oraSfPlecare} părăsesc țara şi mă deplasez la adresa:`) ]
+                        }),
+
+                        // LISTA EXACTĂ 
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- țara: ${tara}; localitatea: ${localitate};` }),
+                        
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- scopul: ${isTuristic} turistic;   ${isVizita} vizită (rude, prieteni, cunoştinţe);   ${isAltul} altul, şi anume ${altulText};` }),
+                        
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- tip călătorie: ${isIndiv} individual;   ${isFam} cu familia;   ${isGrup} în grup (mai multe familii);   ${isAgentie} în grup organizat de o agenție de turism şi anume ${agentieText};` }),
+                        
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- itinerar: ${itinerar};` }),
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- mijloc de deplasare: ${mijlocTransport};` }),
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- firma de transport: ${isFirma} ${firmaTransport}     ${isNuEcazul} Nu e cazul.` }),
+                        
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- voi locui la adresa: ${adresaCazare};` }),
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: `- pot fi contactat la nr. de telefon: ${telefon}.` }),
+
+                        // MENTIUNE VACANTA
+                        new Paragraph({
+                            indent: { left: 1440 },
+                            alignment: AlignmentType.JUSTIFIED,
+                            spacing: { before: 100, after: 100 },
+                            children: [ new TextRun(`Menționez că în această perioadă mă aflu în ${situatieCurenta}.`) ]
+                        }),
+
+                        // OBLIGATII LEGALE
+                        new Paragraph({
+                            indent: { left: 1440 },
+                            alignment: AlignmentType.JUSTIFIED,
+                            text: "Am luat la cunoștință de prevederile Ordinului ministrului apărării naționale nr. MS-198/2020, privind obligațiile personalului din Ministerul Apărării Naționale care stabileşte relații cu străini în interes personal şi de faptul că am următoarele obligații:"
+                        }),
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, children: [ new TextRun({ text: "➢ să predau:", bold: true }) ] }),
+                        new Paragraph({ indent: { left: 2160, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: "• documentele în lucru şefului nemijlocit, spre păstrare;" }),
+                        new Paragraph({ indent: { left: 2160, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: "• documentele de acces (permis, card) la structura de securitate;" }),
+                        new Paragraph({ indent: { left: 2160, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, text: "• documentele de evidență (legitimație, carnet de serviciu) la S.M.R.U." }),
+                        new Paragraph({ indent: { left: 1700, hanging: 260 }, alignment: AlignmentType.JUSTIFIED, children: [ new TextRun({ text: "➢ să mă prezint la structura de securitate la întoarcerea din concediu.", bold: true }) ] }),
+
+                        new Paragraph({ text: "", spacing: { after: 100 } }),
+
+                        // SEMNATURA SOLICITANT
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "Data", alignment: AlignmentType.CENTER }) ] }),
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "Semnătura", alignment: AlignmentType.CENTER }) ] })
+                                    ]
+                                }),
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: dataRaport, alignment: AlignmentType.CENTER }) ] }),
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "", alignment: AlignmentType.CENTER }) ] })
+                                    ]
+                                })
+                            ]
+                        }),
+
+                        new Paragraph({ text: "", spacing: { after: 100 } }),
+
+                        // TABEL AVIZE (4 AVIZE PTR VACANTA)
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        createAvizCell("AVIZ COMANDANT COMPANIE"),
+                                        createAvizCell("AVIZ STRUCTURA DE SECURITATE")
+                                    ]
+                                }),
+                                new TableRow({ children: [ new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "", spacing: { after: 50 } }) ] }), new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "", spacing: { after: 50 } }) ] }) ] }),
+                                new TableRow({
+                                    children: [
+                                        createAvizCell("AVIZ OFIȚER D.C.I.S.M."),
+                                        createAvizCell("AVIZ L.P.I.")
+                                    ]
+                                })
+                            ]
+                        })
+
+                    ]
+                }]
+            });
+
+            // Generare nativă
+            Packer.toBlob(doc).then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Raport_Vacanta_Parasire_Tara_${gradNume.replace(/\s+/g, '_')}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            }).catch(err => {
+                alert("Eroare la generarea documentului: " + err);
+            });
+        }
+    </script>
+</body>
+</html>

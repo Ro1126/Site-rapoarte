@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Raport Învoire</title>
+    <!-- Tailwind CSS pentru stilizare -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- docx.js pentru generare Word -->
+    <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+    <style>
+        /* Stil personalizat pentru "spațiile de completat" din document */
+        .doc-input {
+            background-color: #fef9c3; /* Galben foarte deschis pt a indica zona editabilă */
+            border-bottom: 1px dashed #ca8a04;
+            outline: none;
+            font-family: 'Times New Roman', Times, serif;
+            padding: 0 4px;
+            color: #000;
+            transition: all 0.2s;
+        }
+        .doc-input:focus {
+            background-color: #fef08a;
+            border-bottom: 1px solid #a16207;
+        }
+        .doc-input::placeholder {
+            color: #9ca3af;
+            font-style: italic;
+        }
+        /* Ascunde placeholder-ul cand utilizatorul da click */
+        .doc-input:focus::placeholder {
+            color: transparent;
+        }
+        /* Redimensionare automată pt textare, ascundere scrollbar */
+        .doc-textarea {
+            resize: none;
+            overflow: hidden;
+            vertical-align: top;
+            line-height: inherit;
+        }
+        /* Format A4 pentru container */
+        .a4-page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2.54cm; /* Margini standard de 1 inch */
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 12pt;
+            color: black;
+            line-height: 1.5;
+        }
+        
+        @media print {
+            .no-print { display: none; }
+            .a4-page { box-shadow: none; padding: 0; width: auto; height: auto;}
+            .doc-input { background: transparent; border: none; }
+        }
+    </style>
+</head>
+<body class="bg-slate-300 text-slate-800 p-4 md:p-8 font-sans">
+
+    <!-- BARA DE CONTROL (Fixată sus) -->
+    <div class="max-w-[210mm] mx-auto bg-slate-800 text-white p-4 rounded-t-xl flex flex-col md:flex-row justify-between items-center shadow-lg no-print gap-4 z-10 relative">
+        <div>
+            <h1 class="text-xl font-bold">Document Interactiv: Învoire</h1>
+            <p class="text-xs text-slate-300">Completează direct pe spațiile galbene</p>
+        </div>
+        <div class="flex gap-3">
+            <button type="button" onclick="fillDemoData()" class="text-sm bg-slate-600 hover:bg-slate-500 py-2 px-4 rounded transition">
+                Pre-completează Demo
+            </button>
+            <button type="button" onclick="generateDocument()" class="text-sm bg-blue-600 hover:bg-blue-500 font-bold py-2 px-4 rounded transition shadow-[0_0_15px_rgba(37,99,235,0.5)]">
+                Descarcă .docx
+            </button>
+        </div>
+    </div>
+
+    <!-- DOCUMENTUL TIP A4 -->
+    <div class="overflow-x-auto pb-12">
+        <div class="a4-page relative">
+            
+            <!-- ANTET -->
+            <div class="flex justify-between items-start text-sm md:text-base">
+                <div class="w-[65%] text-center">
+                    <p class="uppercase">ROMÂNIA</p>
+                    <p class="uppercase">Ministerul Apărării Naționale</p>
+                    <p class="uppercase">Academia Tehnică Militară „Ferdinand I”</p>
+                    <p>
+                        Plutonul <input type="text" id="pluton" class="doc-input w-8 text-center" placeholder="..."> / 
+                        Compania <input type="text" id="companieAntet" class="doc-input w-8 text-center" placeholder="..."> / 
+                        Batalionul <input type="text" id="batalionAntet" class="doc-input w-8 text-center" placeholder="..."> Studenţi
+                    </p>
+                    <p>
+                        <input type="text" id="gradNume" class="doc-input w-[90%] mt-1 text-center" placeholder="Gradul și Numele (ex: Sd.Sg.Maj. Mureșanu Dan)">
+                    </p>
+                    <p class="mt-1">Nr ________ din ________</p>
+                    <p>Bucureşti</p>
+                </div>
+                <div class="text-right font-bold w-[35%]">
+                    <p>NECLASIFICAT</p>
+                    <p>Exemplar unic</p>
+                </div>
+            </div>
+
+            <!-- TITLU -->
+            <div class="text-center font-bold mt-12 mb-8">
+                <p>COMANDANTULUI (RECTORULUI)</p>
+                <p>ACADEMIEI TEHNICE MILITARE „FERDINAND I”</p>
+            </div>
+
+            <!-- CORPUL TEXTULUI (Ajustat cu block indent uniform) -->
+            <div class="text-justify space-y-2">
+                <p class="pl-[1.27cm]">Raportez:</p>
+                
+                <p class="pl-[2.54cm] leading-[2]">
+                    Vă adresez rugămintea să-mi aprobaţi o învoire în data de: 
+                    <input type="date" id="dataInvoire" class="doc-input"> 
+                    între orele: <input type="text" id="oraInc" class="doc-input w-14 text-center" placeholder="HH:MM" maxlength="5"> - 
+                    <input type="text" id="oraSf" class="doc-input w-14 text-center" placeholder="HH:MM" maxlength="5">.
+                </p>
+
+                <p class="pl-[2.54cm] leading-[2]">
+                    Pe timpul învoirii mă deplasez la <input type="text" id="adresaInvoire" class="doc-input w-[65%]" placeholder="ex: Calea Rahovei 322, Bloc 67 (sucursala BCR)"> 
+                    şi pot fi contactat la numărul de telefon: <input type="text" id="telefon" class="doc-input w-36 text-center" placeholder="07XXXXXXXX">.
+                </p>
+
+                <p class="pl-[2.54cm] leading-[2]">
+                    Precizez că această învoire îmi este necesară pentru a 
+                    <textarea id="motivInvoire" class="doc-input doc-textarea w-[60%] mt-1 h-8" placeholder="ex: realiza operațiuni bancare" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>.
+                </p>
+
+                <p class="pl-[2.54cm]">
+                    Faţă de cele raportate, rog dispuneţi.
+                </p>
+            </div>
+
+            <!-- SEMNATURA SOLICITANT -->
+            <div class="flex justify-between mt-10 mb-8 px-12">
+                <div class="text-center">
+                    <p>Data</p>
+                    <input type="date" id="dataRaport" class="doc-input mt-1">
+                </div>
+                <div class="text-center">
+                    <p>Semnătura</p>
+                    <p class="mt-1 text-slate-400">.......................</p>
+                </div>
+            </div>
+
+            <!-- APROBARI (Aliniate corect pe rânduri conform modelului) -->
+            <div class="space-y-4 mt-8">
+                <div>
+                    <p>Îndrumător grupă de studii <span class="ml-4">Sunt de acord / Nu sunt de acord</span></p>
+                    <p class="pl-[2.54cm] mt-1">
+                        <input type="text" id="indrumator" class="doc-input w-72" placeholder="Conf. Nume PRENUME">
+                    </p>
+                </div>
+
+                <div>
+                    <p>Comandant companie <input type="text" id="nrCompAprobare" class="doc-input w-8 text-center" placeholder="X"> studenţi <span class="ml-4">Sunt de acord / Nu sunt de acord</span></p>
+                    <p class="pl-[2.54cm] mt-1">
+                        <input type="text" id="cdtCompanie" class="doc-input w-72" placeholder="Cpt. Nume PRENUME">
+                    </p>
+                </div>
+
+                <div>
+                    <p>Comandant Batalion <input type="text" id="nrBatAprobare" class="doc-input w-8 text-center" placeholder="Y"> studenţi <span class="ml-4">Sunt de acord / Nu sunt de acord</span></p>
+                    <p class="pl-[2.54cm] mt-1">
+                        <input type="text" id="cdtBatalion" class="doc-input w-72" placeholder="Col. Nume PRENUME">
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Funcție utilitară pentru a formata data din YYYY-MM-DD în DD.MM.YYYY
+        function formatDate(dateStr) {
+            if (!dateStr) return "___.___.___";
+            const [y, m, d] = dateStr.split('-');
+            return `${d}.${m}.${y}`;
+        }
+
+        // Formatare automată cu ":" pentru ore
+        function formatTimeInput(e) {
+            let val = e.target.value.replace(/\D/g, ''); 
+            if (val.length > 2) {
+                val = val.substring(0, 2) + ':' + val.substring(2, 4);
+            }
+            e.target.value = val;
+        }
+
+        ['oraInc', 'oraSf'].forEach(id => {
+            document.getElementById(id).addEventListener('input', formatTimeInput);
+        });
+
+        // Pre-completare Demo (similar cu fișierul original)
+        function fillDemoData() {
+            document.getElementById('pluton').value = "2";
+            document.getElementById('companieAntet').value = "2";
+            document.getElementById('batalionAntet').value = "1";
+            document.getElementById('gradNume').value = "Sd.Sg.Maj. Mureșanu Dan-Alexandru";
+
+            document.getElementById('dataInvoire').value = "2026-04-07";
+            document.getElementById('oraInc').value = "12:00";
+            document.getElementById('oraSf').value = "14:00";
+
+            document.getElementById('adresaInvoire').value = "Calea Rahovei 322, Bloc 67 (sucursala BCR)";
+            document.getElementById('telefon').value = "0746019792";
+
+            const motivEl = document.getElementById('motivInvoire');
+            motivEl.value = "realiza operațiuni bancare";
+            motivEl.style.height = ''; 
+            motivEl.style.height = motivEl.scrollHeight + 'px';
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dataRaport').value = today;
+
+            document.getElementById('indrumator').value = "Conf. Petrică Ciotîrnae";
+            
+            document.getElementById('nrCompAprobare').value = "2";
+            document.getElementById('cdtCompanie').value = "Cpt. Mihai Almășanu";
+            
+            document.getElementById('nrBatAprobare').value = "1";
+            document.getElementById('cdtBatalion').value = "Col. Cristian RĂDULESCU";
+        }
+
+        // Generare DOCX
+        function generateDocument() {
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, AlignmentType, WidthType, BorderStyle } = docx;
+
+            const pluton = document.getElementById('pluton').value || "...";
+            const companieAntet = document.getElementById('companieAntet').value || "...";
+            const batalionAntet = document.getElementById('batalionAntet').value || "...";
+            const gradNume = document.getElementById('gradNume').value || "..................";
+
+            const dataInvoire = formatDate(document.getElementById('dataInvoire').value);
+            const oraInc = document.getElementById('oraInc').value || "......";
+            const oraSf = document.getElementById('oraSf').value || "......";
+
+            const adresaInvoire = document.getElementById('adresaInvoire').value || ".......................................................";
+            const telefon = document.getElementById('telefon').value || "..................";
+            const motivInvoire = document.getElementById('motivInvoire').value || ".......................................................";
+
+            const dataRaport = formatDate(document.getElementById('dataRaport').value);
+            
+            const indrumator = document.getElementById('indrumator').value || "...........................";
+            const nrCompAprobare = document.getElementById('nrCompAprobare').value || "...";
+            const cdtCompanie = document.getElementById('cdtCompanie').value || "...........................";
+            const nrBatAprobare = document.getElementById('nrBatAprobare').value || "...";
+            const cdtBatalion = document.getElementById('cdtBatalion').value || "...........................";
+
+            const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+
+            const doc = new Document({
+                creator: "Generator Raport ATM",
+                styles: {
+                    default: {
+                        document: {
+                            run: { font: "Times New Roman", size: 24 }, // 12pt
+                            paragraph: { spacing: { line: 240 } }
+                        }
+                    }
+                },
+                sections: [{
+                    properties: {
+                        page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } }
+                    },
+                    children: [
+                        // ANTET
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({
+                                            width: { size: 65, type: WidthType.PERCENTAGE },
+                                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                            children: [
+                                                new Paragraph({ text: "ROMÂNIA", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "MINISTERUL APĂRĂRII NAȚIONALE", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "ACADEMIA TEHNICĂ MILITARĂ „FERDINAND I”", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: `Plutonul ${pluton} / Compania ${companieAntet} / Batalionul ${batalionAntet} Studenţi`, alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: gradNume, alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "Nr ________ din ________", alignment: AlignmentType.CENTER }),
+                                                new Paragraph({ text: "Bucureşti", alignment: AlignmentType.CENTER }),
+                                            ]
+                                        }),
+                                        new TableCell({
+                                            width: { size: 35, type: WidthType.PERCENTAGE },
+                                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                                            children: [
+                                                new Paragraph({ text: "NECLASIFICAT", alignment: AlignmentType.RIGHT, bold: true }),
+                                                new Paragraph({ text: "Exemplar unic", alignment: AlignmentType.RIGHT }),
+                                            ]
+                                        })
+                                    ]
+                                })
+                            ]
+                        }),
+
+                        new Paragraph({ text: "", spacing: { after: 300 } }),
+
+                        // TITLU 
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({ text: "COMANDANTULUI (RECTORULUI)", bold: true }) ] }),
+                        new Paragraph({ alignment: AlignmentType.CENTER, children: [ new TextRun({ text: "ACADEMIEI TEHNICE MILITARE „FERDINAND I”", bold: true }) ] }),
+
+                        new Paragraph({ text: "", spacing: { after: 200 } }),
+
+                        // CORPUL RAPORTULUI
+                        new Paragraph({ text: "Raportez:", indent: { left: 720 } }),
+                        
+                        new Paragraph({
+                            indent: { left: 1440 }, // Block indent pentru aliniere perfecta rand cu rand
+                            alignment: AlignmentType.JUSTIFIED,
+                            children: [ new TextRun(`Vă adresez rugămintea să-mi aprobaţi o învoire în data de: ${dataInvoire} între orele: ${oraInc}-${oraSf}.`) ]
+                        }),
+                        
+                        new Paragraph({
+                            indent: { left: 1440 },
+                            alignment: AlignmentType.JUSTIFIED,
+                            children: [ new TextRun(`Pe timpul învoirii mă deplasez la ${adresaInvoire} şi pot fi contactat la numărul de telefon: ${telefon}.`) ]
+                        }),
+                        
+                        new Paragraph({
+                            indent: { left: 1440 },
+                            alignment: AlignmentType.JUSTIFIED,
+                            children: [ new TextRun(`Precizez că această învoire îmi este necesară pentru a ${motivInvoire}.`) ]
+                        }),
+                        
+                        new Paragraph({
+                            indent: { left: 1440 },
+                            alignment: AlignmentType.JUSTIFIED,
+                            children: [ new TextRun("Faţă de cele raportate, rog dispuneţi.") ]
+                        }),
+
+                        new Paragraph({ text: "", spacing: { after: 300 } }),
+
+                        // SEMNATURA SOLICITANT
+                        new Table({
+                            width: { size: 100, type: WidthType.PERCENTAGE },
+                            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "Data", alignment: AlignmentType.CENTER }) ] }),
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "Semnătura", alignment: AlignmentType.CENTER }) ] })
+                                    ]
+                                }),
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: dataRaport, alignment: AlignmentType.CENTER }) ] }),
+                                        new TableCell({ borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [ new Paragraph({ text: "", alignment: AlignmentType.CENTER }) ] }) 
+                                    ]
+                                })
+                            ]
+                        }),
+
+                        new Paragraph({ text: "", spacing: { after: 300 } }),
+
+                        // APROBARI (Formatate ca în modelul Word)
+                        new Paragraph({ text: "Îndrumător grupă de studii         Sunt de acord / Nu sunt de acord" }),
+                        new Paragraph({ text: indrumator, indent: { left: 1440 } }), 
+
+                        new Paragraph({ text: "", spacing: { after: 150 } }),
+
+                        new Paragraph({ text: `Comandant companie ${nrCompAprobare} studenţi         Sunt de acord / Nu sunt de acord` }),
+                        new Paragraph({ text: cdtCompanie, indent: { left: 1440 } }),
+
+                        new Paragraph({ text: "", spacing: { after: 150 } }),
+
+                        new Paragraph({ text: `Comandant Batalion ${nrBatAprobare} studenţi         Sunt de acord / Nu sunt de acord` }),
+                        new Paragraph({ text: cdtBatalion, indent: { left: 1440 } }),
+                    ]
+                }]
+            });
+
+            // Generare nativă browser
+            Packer.toBlob(doc).then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `Raport_Invoire_${gradNume.replace(/\s+/g, '_')}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            }).catch(err => {
+                alert("Eroare la generarea documentului: " + err);
+            });
+        }
+    </script>
+</body>
+</html>
